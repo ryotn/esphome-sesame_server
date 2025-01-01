@@ -39,13 +39,13 @@ esphome:
     build_unflags:
     - -std=gnu++11
 external_components:
-# - source:
-#     type: git
-#     url: https://github.com/homy-newfs8/esphome-sesame_server
-#     ref: v0.1.0
-#   components: [ sesame_server ]
-- source: '../esphome/esphome/components2'
+- source:
+    type: git
+    url: https://github.com/homy-newfs8/esphome-sesame_server
+    ref: v0.1.0
   components: [ sesame_server ]
+# - source: '../esphome/esphome/components2'
+#   components: [ sesame_server ]
 
 esp32:
   board: esp32-s3-devkitc-1
