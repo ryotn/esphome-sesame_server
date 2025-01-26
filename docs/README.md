@@ -2,6 +2,18 @@
 
 [SESAME 5](https://jp.candyhouse.co/products/sesame5)のふりをして、[SESAME Touch](https://jp.candyhouse.co/products/sesame-touch)や[CANDY HOUSE Remote](https://jp.candyhouse.co/products/candyhouse_remote)等を押しボタンとして使用するための[ESPHome](https://esphome.io/)用コンポーネント
 
+```mermaid
+graph LR
+
+subgraph ESPHome
+  server[esphome-sesame_server]
+end
+
+t[SESAME Touch/PRO] -->|lock/unlock| server
+o[Open Sensor] -->|open/close| server
+r[CANDY HOUSE Remote/nano] -->|lock/unlock| server
+```
+
 > [!注意] このコンポーネントはESPHomeに組込みのBluetooth機能をつかっていません。
 > そのため、ESPHome用の他のBluetooth関連コンポーネントと同居することはできません。
 > 両方を使いたい場合には別のESP32モジュールに搭載してください。
@@ -136,6 +148,22 @@ sesame_server:
 1. ログに記載されているAddressを使って`triggers`セクションを設定する
 
 ## イベントハンドラで利用可能な情報
+```mermaid
+graph LR
+
+subgraph ESPHome
+  direction TB
+  server[esphome-sesame_server]
+  evh[Event Handler]
+end
+
+server -->|event_type| evh
+evh --> |"get_history_tag()"| server
+t[SESAME Touch/PRO] -->|lock/unlock| server
+o[Open Sensor] -->|open/close| server
+r[CANDY HOUSE Remote/nano] -->|lock/unlock| server
+```
+
 イベントハンドラ(`on_event`)内では以下の情報を利用可能です。
 - event_type(イベントタイプ): [Event](https://esphome.io/components/event/index.html)で定義されている文字列。Remote / Touch / スマホ からコマンドを受信した場合は "lock" / "unlock"、 Open Sensorからコマンドを受信した場合は "open" / "close" です。
 - get_history_tag(): イベントハンドラに記述した[Lambda](https://esphome.io/cookbook/lambda_magic.html)コードでトリガーの`id`を使って呼び出すことで、TAG値を取得することが可能です。TAG値はトリガーとなるデバイスによって以下のようになります。
@@ -146,11 +174,88 @@ sesame_server:
   - Open Sensor: "Open Sensor"
   - スマホ: アプリの「自分」に登録してある名前
 
-いずれも記述方法は[example.yaml](../example.yaml)を参考にしてください。
+記述方法は[example.yaml](../example.yaml)を参考にしてください。
+
+### RemoteでLチカ
+
+```yaml
+sesame_server:
+  id: sesame_server_1
+  address: !secret sesame_server_my_address
+  uuid: !secret sesame_server_my_uuid
+  triggers:
+  - name: Remote 1
+    address: !secret remote_address
+    on_event:
+      then:
+        - lambda: |-
+            if (event_type == "lock") {
+              id(led_1).turn_on();
+            } else {
+              id(led_1).turn_off();
+            }
+
+output:
+  - platform: gpio
+    id: led_1
+    pin: GPIO21
+    id: gpio_d1
+```
+上記コードはGPIO21番ピンにLEDが接続されていることを想定しています(Seeed XIAO ESP32S3)。
+
+### Home Assistantとの連携
+
+```mermaid
+graph LR
+
+subgraph ESPHome
+  direction TB
+  server[esphome-sesame_server]
+end
+
+subgraph HASS[Home Assistant]
+  Automation
+end
+
+t[SESAME Touch/PRO] -->|lock/unlock| server
+o[Open Sensor] -->|open/close| server
+r[CANDY HOUSE Remote/nano] -->|lock/unlock| server
+server -->|event| Automation
+```
+
+Home Assistantではボタンが押されたことはエンティティの状態変更として通知されます。オートメーションの編集画面からトリガー追加 > エンティティ > 状態 と選択しトリガーの編集画面を開きます。
+
+<img src="add-trigger.png" width="70%">
+<img src="entity-menu.png" width="70%">
+
+トリガー編集画面では ESPHome で定義したエンティティを選択し、属性として「イベントタイプ」、変化後の属性値に検知したいイベントタイプ(`lock`/`unlock`/`open`/`close`)を指定します。
+
+<img src="select-entity.png" width="70%">
+<img src="entity-all.png" width="70%">
+
 
 ## デュアルロール利用
 
 本コンポーネントと[esphome-sesame3](https://github.com/homy-newfs8/esphome-sesame3)を使うと、一台のESP32でSESAMEへ命令を発行するクライアント機能と、Remote等のイベントをトリガーとして受信するサーバー機能の両方を共存させることが可能です。
+
+```mermaid
+graph LR
+
+subgraph ESPHome
+  direction TB
+  server[esphome-sesame_server]
+  client[esphome-sesame3]
+end
+
+
+t[SESAME Touch/PRO] -->|lock/unlock| server
+o[Open Sensor] -->|open/close| server
+r[CANDY HOUSE Remote/nano] -->|lock/unlock| server
+server --> |automation| client
+client --> s5[SESAME 3/4/5/PRO]
+client --> bot2[SESAME bot/2]
+client --> bike[SESAME bike]
+```
 
 Touchに特定の名前を付けたカードがかざされた時に別のセンサーのデータを確認してからSESAMEを開錠する、といったことが1台のESP32で(クラウドに頼らずに)実現可能になります。[dual-role.yaml](../dual-role.yaml)を参照してください。
 
