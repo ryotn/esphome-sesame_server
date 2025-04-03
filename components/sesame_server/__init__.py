@@ -72,4 +72,5 @@ async def to_code(config):
                 t = await text_sensor.new_text_sensor(trigger[CONF_HISTORY_TAG])
                 cg.add(trig.set_history_tag_sensor(t))
             cg.add(var.add_trigger(trig))
-    cg.add_library(None, None, "https://github.com/homy-newfs8/libsesame3bt-server#v0.1.1")
+    cg.add_library(None, None, "https://github.com/homy-newfs8/libsesame3bt-server#v0.1.3")
+    # cg.add_library(None, None, "symlink://../../../../../../PlatformIO/Projects/libsesame3bt-server")
