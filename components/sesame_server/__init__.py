@@ -56,7 +56,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_MAX_SESSIONS, default=3): cv.int_range(1, 9),
             cv.Optional(CONF_TRIGGERS): cv.ensure_list(TRIGGER_SCHEMA),
         }
-    ),
+    ).extend(cv.COMPONENT_SCHEMA),
     cv.only_with_arduino,
 )
 
