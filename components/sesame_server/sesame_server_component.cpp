@@ -143,4 +143,15 @@ SesameTrigger::invoke(Sesame::item_code_t cmd, const std::string& tag) {
 	return Sesame::result_code_t::success;
 }
 
+void
+SesameServerComponent::disconnect(const NimBLEAddress& addr) {
+	ESP_LOGI(TAG, "Disconnecting %s", addr.toString().c_str());
+	sesame_server.disconnect(addr);
+}
+
+bool
+SesameServerComponent::has_session(const NimBLEAddress& addr) const {
+	return sesame_server.has_session(addr);
+}
+
 }  // namespace esphome::sesame_server
