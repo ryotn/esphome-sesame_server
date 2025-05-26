@@ -12,7 +12,6 @@ from esphome.const import (
 AUTO_LOAD = ["event", "text_sensor"]
 DEPENDENCIES = ["event", "text_sensor"]
 CONFLICTS_WITH = ["esp32_ble"]
-MULTI_CONF = True
 
 CONF_TRIGGERS = "triggers"
 CONF_MAX_SESSIONS = "max_sessions"
