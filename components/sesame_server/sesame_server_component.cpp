@@ -61,7 +61,7 @@ SesameServerComponent::save_secret(const std::array<std::byte, Sesame::SECRET_SI
 }
 
 Sesame::result_code_t
-SesameServerComponent::on_command(const NimBLEAddress& addr, Sesame::item_code_t cmd, const std::string& tag) {
+SesameServerComponent::on_command(const NimBLEAddress& addr, Sesame::item_code_t cmd, const std::string tag) {
 	ESP_LOGD(TAG, "cmd=%s(%u), tag=\"%s\" received from %s", event_name(cmd), static_cast<uint8_t>(cmd), tag.c_str(),
 	         addr.toString().c_str());
 	if (auto target = std::find_if(std::cbegin(triggers), std::cend(triggers),
@@ -96,9 +96,8 @@ SesameServerComponent::setup() {
 		});
 	}
 	sesame_server.set_on_command_callback([this](const auto& addr, auto item_code, const auto& tag) {
-		set_timeout(0, [this, addr, item_code, tag]() { on_command(addr, item_code, tag); });
+		defer([this, addr, item_code, tag_str = tag]() { on_command(addr, item_code, tag_str); });
 		return Sesame::result_code_t::success;
-		// return on_command(addr, item_code, tag);
 	});
 	if (!sesame_server.begin(Sesame::model_t::sesame_5, btaddr, uuid) || !sesame_server.start_advertising()) {
 		ESP_LOGE(TAG, "Failed to start SESAME server");

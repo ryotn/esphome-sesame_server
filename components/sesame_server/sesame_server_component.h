@@ -54,7 +54,7 @@ class SesameServerComponent : public Component {
 	bool save_secret(const std::array<std::byte, libsesame3bt::Sesame::SECRET_SIZE>& secret);
 	libsesame3bt::Sesame::result_code_t on_command(const NimBLEAddress& addr,
 	                                               libsesame3bt::Sesame::item_code_t cmd,
-	                                               const std::string& tag);
+	                                               const std::string tag);
 };
 
 }  // namespace sesame_server
