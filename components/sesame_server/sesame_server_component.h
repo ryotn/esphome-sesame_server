@@ -43,6 +43,9 @@ class SesameServerComponent : public Component {
 	virtual float get_setup_priority() const override { return setup_priority::AFTER_WIFI; };
 	void disconnect(const NimBLEAddress& addr);
 	bool has_session(const NimBLEAddress& addr) const;
+	bool has_trigger(const NimBLEAddress& addr) const;
+	void start_advertising();
+	void stop_advertising();
 
  private:
 	libsesame3bt::SesameServer sesame_server;

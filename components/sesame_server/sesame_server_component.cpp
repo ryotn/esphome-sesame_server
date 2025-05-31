@@ -145,13 +145,35 @@ SesameTrigger::invoke(Sesame::item_code_t cmd, const std::string& tag) {
 
 void
 SesameServerComponent::disconnect(const NimBLEAddress& addr) {
-	ESP_LOGI(TAG, "Disconnecting %s", addr.toString().c_str());
-	sesame_server.disconnect(addr);
+	if (has_session(addr)) {
+		ESP_LOGI(TAG, "Disconnecting %s", addr.toString().c_str());
+		sesame_server.disconnect(addr);
+	}
 }
 
 bool
 SesameServerComponent::has_session(const NimBLEAddress& addr) const {
 	return sesame_server.has_session(addr);
+}
+
+bool
+SesameServerComponent::has_trigger(const NimBLEAddress& addr) const {
+	return std::any_of(std::cbegin(triggers), std::cend(triggers),
+	                   [&addr](const auto& trigger) { return trigger->get_address() == addr; });
+}
+
+void
+SesameServerComponent::start_advertising() {
+	if (!sesame_server.start_advertising()) {
+		ESP_LOGW(TAG, "Failed to start advertising");
+	}
+}
+
+void
+SesameServerComponent::stop_advertising() {
+	if (!sesame_server.stop_advertising()) {
+		ESP_LOGW(TAG, "Failed to stop advertising");
+	}
 }
 
 }  // namespace esphome::sesame_server
