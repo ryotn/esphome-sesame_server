@@ -14,20 +14,37 @@ external_components:
 - source:
     type: git
     url: https://github.com/homy-newfs8/esphome-sesame_server
-    ref: v0.1.0
+    ref: v0.2.0
   components: [ sesame_server ]
 - source:
     type: git
     url: https://github.com/homy-newfs8/esphome-sesame3
-    ref: v0.13.0
+    ref: v0.17.0
   components: [ sesame ]
 # - source: '../esphome/esphome/components2'
-#   components: [ sesame_server ]
+#   components: [ sesame, sesame_server ]
 
 esp32:
   board: esp32-c3-devkitm-1
   framework:
     type: arduino
+
+ota:
+- platform: esphome
+  password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_passphrase
+
+api:
+  password: !secret api_password
+  on_client_connected:
+    then:
+    - lambda: |-
+        ESP_LOGI(id(TAG).c_str(), "API client connected, retrieving initial battery state");
+        id(remote_1).update();
+        id(touch_1).update();
 
 ## Enable logging
 logger:
@@ -70,3 +87,32 @@ sesame:
   secret: !secret bot2_secret
   bot:
     id: bot_2
+- id: remote_1
+  model: remote
+  address: !secret remote_address
+  secret: !secret remote_secret
+  battery_pct:
+    name: Remote battery remaining
+  always_connect: false
+#  update_interval: 3days
+  update_interval: never
+- id: touch_1
+  model: sesame_touch
+  address: !secret touch_1_address
+  battery_pct:
+    name: Touch battery remaining
+  always_connect: false
+  update_interval: never
+
+time:
+- id: time_1
+  platform: homeassistant
+  on_time:
+  - seconds: 0
+    minutes: 5
+    hours: 3
+    days_of_week: SUN
+    then:
+    - lambda: |-
+        ESP_LOGD("example", "Update Remote battery remaining on %s", id(time_1).now().strftime("%Y-%m-%d %H:%M:%S").c_str());
+        id(remote_1).update();

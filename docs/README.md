@@ -1,6 +1,6 @@
 # esphome-sesame_server
 
-[SESAME 5](https://jp.candyhouse.co/products/sesame5)のふりをして、[SESAME Touch](https://jp.candyhouse.co/products/sesame-touch)や[CANDY HOUSE Remote](https://jp.candyhouse.co/products/candyhouse_remote)等を押しボタンとして使用するための[ESPHome](https://esphome.io/)用コンポーネント
+[SESAME 5](https://jp.candyhouse.co/products/sesame5)のふりをして、[SESAME Touch](https://jp.candyhouse.co/products/sesame-touch)、[CANDY HOUSE Remote](https://jp.candyhouse.co/products/candyhouse_remote)、[オープンセンサー](https://jp.candyhouse.co/products/sesame-opensensor)等を押しボタンとして使用するための[ESPHome](https://esphome.io/)用コンポーネント
 
 ```mermaid
 graph LR
@@ -29,7 +29,7 @@ r[CANDY HOUSE Remote/nano] -->|lock/unlock| server
 ## 必要なもの
 
 * 適切(**重要**)なUUIDとBLEアドレスの組<br/>
-不適切なUUIDとBLEアドレスの組を使用すると、Remote等のデバイスが接続してこないようです。私は故障したSESAME 5のUUIDとアドレスを使用しました。適切か否かの判定基準は不明です。
+不適切なUUIDとBLEアドレスの組を使用すると、Remote等のデバイスが接続してこないようです。私は故障したSESAME 5のUUIDとアドレスを使用しました。適切か否かの判定基準は不明です。Remote nanoのUUIDとアドレスの組も使用可能なようです。
 * ESP32シリーズ<br/>
 基本的に[Arduino core for ESP32](https://github.com/espressif/arduino-esp32)がサポートするESP32シリーズはどれでも動作すると思われます。私はArduino core v2.0系を使い、ESP32 C3やESP32 S3で動作確認しています。
 
@@ -54,7 +54,7 @@ external_components:
 - source:
     type: git
     url: https://github.com/homy-newfs8/esphome-sesame_server
-    ref: v0.1.1
+    ref: v0.2.0
   components: [ sesame_server ]
 # - source: '../esphome/esphome/components2'
 #   components: [ sesame_server ]
@@ -258,6 +258,13 @@ client --> bike[SESAME bike]
 ```
 
 Touchに特定の名前を付けたカードがかざされた時に別のセンサーのデータを確認してからSESAMEを開錠する、といったことが1台のESP32で(クラウドに頼らずに)実現可能になります。[dual-role.yaml](../dual-role.yaml)を参照してください。
+
+### デュアルロール時の注意点
+
+デュアルロール構成にすると、SESAME Touchからのトリガーを待ち受けつつ、そのSESAME Touchのバッテリー残量を監視するといったことも可能になります。ただし、SESAME Touchが(トリガー通知のために)本機(ESP32)に接続してきている状態においては、バッテリー残量を問合わせるために本機からそのSESAME Touchへ接続することができません。そこで、バッテリー残量を取得する際にはサーバー側の接続を一旦切断してから問合せを実行します。問合わせ実行中(数秒程度)はサーバーのアドバタイジングも停止するためSESAME Touchからのトリガーを受けることができません。問合わせが完了すればトリガーの受付けが可能になります。
+
+そのようにクライアント側接続は一時的なものとする必要があるため、`always_connect`属性は`False`に設定する必要があります。バッテリー監視を低頻度にするため`update_interval`を長期間に設定することをお薦めします。また、SESAME TOuch等の使用がない時間に問合わせたいならば、`update_interval`を`never`に設定し、`time`コンポーネントの`on_time`イベントでバッテリー残量の問合わせを実行するのも良いでしょう。[dual-role.yaml](../dual-role.yaml)に例があります。
+
 
 ## 未登録状態へのリセット
 `sesame_server.reset()`を呼び出すことで未登録状態にすることが可能です。[example.yaml](../example.yaml)にHome Assistant上に表示され、クリックすると初期化する疑似ボタンコンポーネントの定義をしてあります。参考にしてください。
