@@ -1,16 +1,12 @@
 import string
 
 import esphome.codegen as cg
-from esphome.components import event, text_sensor
+from esphome.components import event, sensor, text_sensor
 import esphome.config_validation as cv
-from esphome.const import (
-    CONF_ADDRESS,
-    CONF_ID,
-    CONF_UUID,
-)
+from esphome.const import CONF_ADDRESS, CONF_ID, CONF_UUID
 
-AUTO_LOAD = ["event", "text_sensor"]
-DEPENDENCIES = ["event", "text_sensor"]
+AUTO_LOAD = ["event", "sensor", "text_sensor"]
+DEPENDENCIES = ["event", "sensor", "text_sensor"]
 CONFLICTS_WITH = ["esp32_ble"]
 
 CONF_TRIGGERS = "triggers"
@@ -22,6 +18,7 @@ SesameServerComponent = sesame_server_ns.class_("SesameServerComponent", cg.Poll
 SesameTrigger = sesame_server_ns.class_("SesameTrigger")
 
 CONF_HISTORY_TAG = "history_tag"
+CONF_TRIGGER_TYPE = "trigger_type"
 
 
 def is_hex_string(str, valid_len):
@@ -43,6 +40,7 @@ TRIGGER_SCHEMA = event.event_schema().extend(
         cv.GenerateID(): cv.declare_id(SesameTrigger),
         cv.Required(CONF_ADDRESS): cv.mac_address,
         cv.Optional(CONF_HISTORY_TAG): text_sensor.text_sensor_schema(),
+        cv.Optional(CONF_TRIGGER_TYPE): sensor.sensor_schema(),
     }
 )
 
@@ -70,8 +68,11 @@ async def to_code(config):
             if CONF_HISTORY_TAG in trigger:
                 t = await text_sensor.new_text_sensor(trigger[CONF_HISTORY_TAG])
                 cg.add(trig.set_history_tag_sensor(t))
+            if CONF_TRIGGER_TYPE in trigger:
+                t = await sensor.new_sensor(trigger[CONF_TRIGGER_TYPE])
+                cg.add(trig.set_trigger_type_sensor(t))
             cg.add(var.add_trigger(trig))
-    cg.add_library("libsesame3bt-server", None, "https://github.com/homy-newfs8/libsesame3bt-server#v0.2.0")
-    # cg.add_library("libsesame3bt-server", None, "symlink://../../../../../../PlatformIO/Projects/libsesame3bt-server")
-    # cg.add_library("libsesame3bt-core", None, "symlink://../../../../../../PlatformIO/Projects/libsesame3bt-core")
-    # cg.add_platformio_option("lib_ldf_mode", "deep")
+    # cg.add_library("libsesame3bt-server", None, "https://github.com/homy-newfs8/libsesame3bt-server#v0.3.0")
+    cg.add_library("libsesame3bt-server", None, "symlink://../../../../../../PlatformIO/Projects/libsesame3bt-server")
+    cg.add_library("libsesame3bt-core", None, "symlink://../../../../../../PlatformIO/Projects/libsesame3bt-core")
+    cg.add_platformio_option("lib_ldf_mode", "deep")

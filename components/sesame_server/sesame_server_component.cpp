@@ -61,7 +61,10 @@ SesameServerComponent::save_secret(const std::array<std::byte, Sesame::SECRET_SI
 }
 
 Sesame::result_code_t
-SesameServerComponent::on_command(const NimBLEAddress& addr, Sesame::item_code_t cmd, const std::string tag) {
+SesameServerComponent::on_command(const NimBLEAddress& addr,
+                                  Sesame::item_code_t cmd,
+                                  const std::string tag,
+                                  std::optional<libsesame3bt::trigger_type_t> trigger_type) {
 	ESP_LOGD(TAG, "cmd=%s(%u), tag=\"%s\" received from %s", event_name(cmd), static_cast<uint8_t>(cmd), tag.c_str(),
 	         addr.toString().c_str());
 	if (auto target = std::find_if(std::cbegin(triggers), std::cend(triggers),
@@ -79,7 +82,7 @@ SesameServerComponent::on_command(const NimBLEAddress& addr, Sesame::item_code_t
 				}
 			});
 		}
-		return (*target)->invoke(cmd, tag);
+		return (*target)->invoke(cmd, tag, trigger_type);
 	}
 }
 
@@ -95,8 +98,8 @@ SesameServerComponent::setup() {
 			ESP_LOGI(TAG, "SESAME registered by %s", addr.toString().c_str());
 		});
 	}
-	sesame_server.set_on_command_callback([this](const auto& addr, auto item_code, const auto& tag) {
-		defer([this, addr, item_code, tag_str = tag]() { on_command(addr, item_code, tag_str); });
+	sesame_server.set_on_command_callback([this](const auto& addr, auto item_code, const auto& tag, auto trigger_type) {
+		defer([this, addr, item_code, tag_str = tag, trigger_type]() { on_command(addr, item_code, tag_str, trigger_type); });
 		return Sesame::result_code_t::success;
 	});
 	if (!sesame_server.begin(Sesame::model_t::sesame_5, btaddr, uuid) || !sesame_server.start_advertising()) {
@@ -129,14 +132,18 @@ SesameTrigger::SesameTrigger(const char* address) : address(address, BLE_ADDR_RA
 }
 
 Sesame::result_code_t
-SesameTrigger::invoke(Sesame::item_code_t cmd, const std::string& tag) {
+SesameTrigger::invoke(Sesame::item_code_t cmd, const std::string& tag, std::optional<libsesame3bt::trigger_type_t> trigger_type) {
 	const char* evs = event_name(cmd);
 	if (evs[0] == 0) {
 		return Sesame::result_code_t::unknown;
 	}
 	history_tag = tag;
+	this->trigger_type = trigger_type;
 	if (history_tag_sensor) {
 		history_tag_sensor->publish_state(tag);
+	}
+	if (trigger_type_sensor) {
+		trigger_type_sensor->publish_state(trigger_type.has_value() ? static_cast<float>(*trigger_type) : NAN);
 	}
 	ESP_LOGD(TAG, "Triggering %s to %s", evs, get_name().c_str());
 	trigger(evs);
