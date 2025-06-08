@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.3.0] 2025-06-08
+- Support SESAME Face / PRO
+- Support new History TAG format for SESAME May 2025 update
+
 ## [v0.2.0] 2025-05-31
 - Improved dual role usage. Added the ability to stop a server connection while a client connection is active (when used with [esphome-sesame3](https://github.com/homy-newfs8/esphome-sesame3) v0.17.0 or later)
 

@@ -131,6 +131,14 @@ SesameTrigger::SesameTrigger(const char* address) : address(address, BLE_ADDR_RA
 	set_event_types(supported_triggers);
 }
 
+static float
+make_float(std::optional<libsesame3bt::trigger_type_t> trigger_type) {
+	if (trigger_type.has_value()) {
+		return static_cast<float>(*trigger_type);
+	}
+	return NAN;
+}
+
 Sesame::result_code_t
 SesameTrigger::invoke(Sesame::item_code_t cmd, const std::string& tag, std::optional<libsesame3bt::trigger_type_t> trigger_type) {
 	const char* evs = event_name(cmd);
@@ -138,12 +146,12 @@ SesameTrigger::invoke(Sesame::item_code_t cmd, const std::string& tag, std::opti
 		return Sesame::result_code_t::unknown;
 	}
 	history_tag = tag;
-	this->trigger_type = trigger_type;
+	this->trigger_type = make_float(trigger_type);
 	if (history_tag_sensor) {
 		history_tag_sensor->publish_state(tag);
 	}
 	if (trigger_type_sensor) {
-		trigger_type_sensor->publish_state(trigger_type.has_value() ? static_cast<float>(*trigger_type) : NAN);
+		trigger_type_sensor->publish_state(this->trigger_type);
 	}
 	ESP_LOGD(TAG, "Triggering %s to %s", evs, get_name().c_str());
 	trigger(evs);

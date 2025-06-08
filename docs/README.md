@@ -1,6 +1,6 @@
 # esphome-sesame_server
 
-[SESAME 5](https://jp.candyhouse.co/products/sesame5)のふりをして、[SESAME Touch](https://jp.candyhouse.co/products/sesame-touch)、[CANDY HOUSE Remote](https://jp.candyhouse.co/products/candyhouse_remote)、[オープンセンサー](https://jp.candyhouse.co/products/sesame-opensensor)等を押しボタンとして使用するための[ESPHome](https://esphome.io/)用コンポーネント
+[SESAME 5](https://jp.candyhouse.co/products/sesame5)のふりをして、[SESAME Touch](https://jp.candyhouse.co/products/sesame-touch)、[CANDY HOUSE Remote](https://jp.candyhouse.co/products/candyhouse_remote)、[オープンセンサー](https://jp.candyhouse.co/products/sesame-opensensor)、[SESAMEフェイス](https://jp.candyhouse.co/products/sesame-face)等を押しボタン(トリガー)として使用するための[ESPHome](https://esphome.io/)用コンポーネント
 
 ```mermaid
 graph LR
@@ -9,7 +9,7 @@ subgraph ESPHome
   server[esphome-sesame_server]
 end
 
-t[SESAME Touch/PRO] -->|lock/unlock| server
+t[SESAME Touch/PRO<br/>SESAME Face/PRO] -->|lock/unlock| server
 o[Open Sensor] -->|open/close| server
 r[CANDY HOUSE Remote/nano] -->|lock/unlock| server
 ```
@@ -28,12 +28,73 @@ r[CANDY HOUSE Remote/nano] -->|lock/unlock| server
 
 ## 必要なもの
 
-* 適切(**重要**)なUUIDとBLEアドレスの組<br/>
-不適切なUUIDとBLEアドレスの組を使用すると、Remote等のデバイスが接続してこないようです。私は故障したSESAME 5のUUIDとアドレスを使用しました。適切か否かの判定基準は不明です。Remote nanoのUUIDとアドレスの組も使用可能なようです。
+* 適切なUUIDとBLEアドレスの組<br/>
+SESAME 5以降の機種ではBLEアドレスとしてUUIDから算出可能な値を使う仕様になっています(Remote/Touch等は操作対象デバイスのUUIDを保持しており、操作時にはBTスキャンを実行せずに算出されたアドレスに接続します)。計算方法等は[後述](#uuidからbleアドレスの導出方法)します
+
 * ESP32シリーズ<br/>
 基本的に[Arduino core for ESP32](https://github.com/espressif/arduino-esp32)がサポートするESP32シリーズはどれでも動作すると思われます。私はArduino core v2.0系を使い、ESP32 C3やESP32 S3で動作確認しています。
 
+### UUIDからBLEアドレスの導出方法
 
+UUIDからBLEアドレスを算出する方法は[API文書](https://github.com/CANDY-HOUSE/API_document/blob/master/SesameOS3/101_add_sesame.ja.md#%E3%82%A2%E3%82%AF%E3%83%86%E3%82%A3%E3%83%93%E3%83%86%E3%82%A3%E5%9B%B3%E6%96%B0%E8%A6%8F%E3%82%BB%E3%82%B5%E3%83%9F-5-%E3%82%92%E8%BF%BD%E5%8A%A0)に公開されています。
+
+サーバーで使用するUUIDとBLEアドレスの組を指定する場合は、まず適当なツールでUUIDを生成し上記のアルゴリズムでBLEアドレスを算出して使用します。以下に Google Geminiに生成してもらったpythonスクリプトを置きますので参考にしてください。
+
+```python
+from Crypto.Hash import CMAC
+from Crypto.Cipher import AES
+import binascii
+
+def generate_aes_cmac_modified(uuid_str):
+    """
+    128bit UUIDを鍵とし、AES CMACで文字列"candy"の認証コードを算出する。
+    その先頭6バイトを取得し、バイト順を反転させ、
+    反転後の先頭バイトに0xc0をOR演算し、16進数文字列で出力する。
+
+    Args:
+        uuid_str (str): 128bit UUIDの文字列。ハイフンを含んでいても良い。
+
+    Returns:
+        str: 認証コードの加工後の先頭6バイトの16進数文字列。
+    """
+    # UUID文字列からハイフンを除去し、16進数として解釈してバイト列に変換
+    uuid_bytes = binascii.unhexlify(uuid_str.replace('-', ''))
+
+    # CMACオブジェクトを作成
+    cobj = CMAC.new(uuid_bytes, ciphermod=AES)
+
+    # 認証対象のデータ
+    data = b"candy"
+
+    # データを更新（ハッシュ計算）
+    cobj.update(data)
+
+    # 認証コード（MAC）を取得
+    mac = cobj.digest()
+
+    # 先頭6バイトを抽出
+    first_6_bytes = mac[:6]
+
+    # バイト順を反転
+    reversed_bytes = first_6_bytes[::-1] # スライスでバイト列を反転
+
+    # 反転後の先頭バイトに0xc0をOR演算
+    # バイト列はイミュータブルなので、リストに変換して操作し、再度バイト列に戻す
+    modified_bytes_list = list(reversed_bytes)
+    modified_bytes_list[0] = modified_bytes_list[0] | 0xc0
+    final_bytes = bytes(modified_bytes_list)
+
+    # 16進数文字列で出力
+    return binascii.hexlify(final_bytes).decode('utf-8')
+
+if __name__ == "__main__":
+    # 例として128bit UUIDを用意
+    test_uuid = "2d39e028-a1ed-48b8-809b-1799d1018ec1"
+
+    auth_code_modified = generate_aes_cmac_modified(test_uuid)
+    print(f"入力UUID: {test_uuid}")
+    print(f"加工後の認証コード (先頭6バイト): {auth_code_modified}")
+```
 # ESPHomeへの本コンポーネントの導入
 本コンポーネントをESP32にインストールするにはESPHomeの[External Component](https://esphome.io/components/external_components.html)として導入します。以下がYAMLファイルの例です。また[サンプルファイル](../example.yaml)も参考にしてください。
 
@@ -54,7 +115,7 @@ external_components:
 - source:
     type: git
     url: https://github.com/homy-newfs8/esphome-sesame_server
-    ref: v0.2.0
+    ref: v0.3.0
   components: [ sesame_server ]
 # - source: '../esphome/esphome/components2'
 #   components: [ sesame_server ]
@@ -73,7 +134,7 @@ esp32:
 
 # 本機のUUID、Bluetooth Addressの設定
 
-前述したように、本機はSESAME 5のようにふるまいますが、SESAME TouchやCANDY HOUSE Remoteは特定のUUIDとBluetooth Address(以降単にAddress)の組み合わせを持ったデバイスにしか接続してこないように見えます。そこで、適切なUUIDとAddressを用意し、設定する必要があります。
+UUIDとアドレスは[前述](#uuidからbleアドレスの導出方法)した条件を満たすものを使用してください。
 
 ```yaml
 sesame_server:
@@ -107,6 +168,9 @@ sesame_server:
     history_tag:
       id: touch_1_tag
       name: "Sesame_Touch_tag"
+    trigger_type:
+      id: touch_1_trigger_type
+      name: "Sesame_Touch_trigger_type"
     on_event:
       then:
         - lambda: |-
@@ -121,13 +185,16 @@ sesame_server:
 
 `triggers`セクションには複数のデバイスをリストで指定します。デバイスひとつひとつは[Event](https://esphome.io/components/event/index.html)であり、それぞれにイベント受信時の処理(`on_event`)やHome Assistantで表示されるアイコン等を指定することができます。
 
-`history_tag`は[Text Sensor](https://esphome.io/components/text_sensor/#base-text-sensor-configuration)で、SESAME Touch / SESAME Touch PROが通知してくるタグ値をHome Assistantに通知します。SESAME Touch系では指紋やカードにつけた名前が通知されるため、それらに応じて処理を分岐させることが可能です。
+`history_tag`は[Text Sensor](https://esphome.io/components/text_sensor/#base-text-sensor-configuration)で、SESAME Touch等が通知してくるタグ値をHome Assistantに通知します。SESAME Touch系では指紋やカードにつけた名前が通知されるため、それらに応じて処理を分岐させることが可能です。同じ値は[Lambda](https://esphome.io/cookbook/lambda_magic.html)内からはtriggerコンポーネントの`std::string get_history_tag()`で参照可能です。
+
+`trigger_type`は[Sensor](https://esphome.io/components/sensor/#config-sensor)で、SESAME Touch等が通知してくるタイプ値をHome Assistantに通知します。この値についての詳細は[esphome-sesame3のREADME](https://github.com/homy-newfs8/esphome-sesame3/tree/main/docs#history-tag-uuid-and-trigger-type)に記載してあります。センサー値はESPHomeの仕様上はfloat値です。`trigger_type`を含まない命令を受信した場合は`NaN`になります。[Lambda](https://esphome.io/cookbook/lambda_magic.html)内ではtriggerコンポーネントの`float get_trigger_type()`で参照可能です。
 
 ## trigger設定変数
 * **id** (*Optional*, ID): コード生成に使用される識別子を任意に指定可能。
 * **name** (*Optional*, string): イベント名。**id**または**name**のいずれかは必ず指定すること。
 * **address** (**Required**, string): 接続元機器のBluetooth Address。
 * **history_tag** (*Optional*, [Text Sensor](https://esphome.io/components/text_sensor/#base-text-sensor-configuration)): 接続元機器が通知してくるTAG文字列を公開するためのテキストセンサー。
+* **trigger_type** (*Optional*, [Sensor](https://esphome.io/components/sensor/#config-sensor)): 接続元機器が通知してくるtrigger種別値。
 * その他[Event](https://esphome.io/components/event/index.html)コンポーネントに指定可能な値。
 
 ### 利用デバイスのAddressを調べる
