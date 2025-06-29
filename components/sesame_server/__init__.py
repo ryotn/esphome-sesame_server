@@ -11,7 +11,7 @@ CONFLICTS_WITH = ["esp32_ble"]
 
 CONF_TRIGGERS = "triggers"
 CONF_MAX_SESSIONS = "max_sessions"
-EVENT_TYPES = ["open", "close", "lock", "unlock"]
+EVENT_TYPES = ["open", "close", "lock", "unlock", "none"]
 
 sesame_server_ns = cg.esphome_ns.namespace("sesame_server")
 SesameServerComponent = sesame_server_ns.class_("SesameServerComponent", cg.PollingComponent)
