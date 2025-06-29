@@ -27,7 +27,8 @@ event_name(Sesame::item_code_t cmd) {
 			return "open";
 		case item_code_t::door_closed:
 			return "close";
-			break;
+		case item_code_t::none:
+			return "none";
 		default:
 			return "";
 	}
@@ -80,6 +81,10 @@ SesameServerComponent::on_command(const NimBLEAddress& addr,
 				if (!sesame_server.send_lock_status(last_status)) {
 					ESP_LOGW(TAG, "Failed to send lock status");
 				}
+			});
+			set_timeout(100, [this, target, tag, trigger_type]() {
+				ESP_LOGD(TAG, "Send To None");
+				(*target)->invoke(Sesame::item_code_t::none, tag, trigger_type);
 			});
 		}
 		return (*target)->invoke(cmd, tag, trigger_type);
