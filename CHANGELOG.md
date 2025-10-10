@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.6.0] 2025-09-15
+- Remove `address` parameter requirements from `sesame_server` section.
+
+## [v0.5.0] 2025-09-07
+- Bump libsesame3-server version to v0.5.0
+
+## [v0.4.0] 2025-08-10
+- Support ESPHome 2025.7.0 (Arduino ESP32 3.x)
+
 ## [v0.3.0] 2025-06-08
 - Support SESAME Face / PRO
 - Support new History TAG format for SESAME May 2025 update
